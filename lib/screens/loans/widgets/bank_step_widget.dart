@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../utils/constants.dart';
+import '../../../utils/user_state.dart';
 
 class BankStepWidget extends StatefulWidget {
   final Function(String bankName, String accountNumber, String ifsc, String holderName) onBankConfirmed;
@@ -14,11 +15,22 @@ class BankStepWidget extends StatefulWidget {
 }
 
 class _BankStepWidgetState extends State<BankStepWidget> {
-  final String _bankHolderName = 'Aditi Sharma';
-  final String _accountNumber = '987654321098';
-  final String _ifscCode = 'SBIN0001234';
-  final String _bankName = 'State Bank of India';
+  final user = UserProfileState();
   bool _isCustomBank = false;
+
+  late final String _bankHolderName;
+  late final String _accountNumber;
+  late final String _ifscCode;
+  late final String _bankName;
+
+  @override
+  void initState() {
+    super.initState();
+    _bankHolderName = user.fullName;
+    _accountNumber = user.accountNumber;
+    _ifscCode = user.ifscCode;
+    _bankName = user.bankName;
+  }
 
   final _customHolderCtrl = TextEditingController();
   final _customAccCtrl = TextEditingController();

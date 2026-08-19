@@ -1,8 +1,10 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
+import '../../utils/user_state.dart';
 import 'signup_screen.dart';
-import 'phone_login_screen.dart';
 import '../dashboard/customer_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,16 +18,32 @@ class _LoginScreenState extends State<LoginScreen> {
   int _tabIndex = 0; // 0: Email, 1: Phone
   final _emailCtrl = TextEditingController(text: 'aditi@example.com');
   final _passCtrl = TextEditingController(text: 'password123');
-  final _phoneCtrl = TextEditingController(text: '9876543210');
   bool _obscure = true;
   bool _loading = false;
-  String? _emailErr, _passErr, _phoneErr;
+  String? _emailErr, _passErr;
+
+  // Phone OTP State
+  bool _otpSent = false;
+  String? _generatedOtp;
+  bool _showSmsBanner = false;
+  int _timerSeconds = 30;
+  Timer? _countdownTimer;
+
+  final List<TextEditingController> _otpControllers = List.generate(4, (_) => TextEditingController());
+  final List<FocusNode> _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  String? _otpError;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
-    _phoneCtrl.dispose();
+    _countdownTimer?.cancel();
+    for (var c in _otpControllers) {
+      c.dispose();
+    }
+    for (var f in _otpFocusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -57,15 +75,72 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _submitPhone() {
-    final phone = _phoneCtrl.text.trim();
-    if (phone.length != 10) {
-      setState(() => _phoneErr = 'Enter a valid 10-digit mobile number');
+  void _sendPhoneOtp() {
+    final otp = (1000 + Random().nextInt(9000)).toString();
+    setState(() {
+      _generatedOtp = otp;
+      _otpSent = true;
+      _showSmsBanner = true;
+      _timerSeconds = 30;
+      _otpError = null;
+      for (var c in _otpControllers) {
+        c.clear();
+      }
+    });
+
+    _startTimer();
+
+    // Auto-hide SMS banner after 8 seconds
+    Timer(const Duration(seconds: 8), () {
+      if (mounted) {
+        setState(() => _showSmsBanner = false);
+      }
+    });
+  }
+
+  void _startTimer() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_timerSeconds > 0) {
+        setState(() => _timerSeconds--);
+      } else {
+        t.cancel();
+      }
+    });
+  }
+
+  void _verifyPhoneOtp() {
+    final entered = _otpControllers.map((c) => c.text).join();
+    if (entered.length < 4) {
+      setState(() => _otpError = 'Please enter the complete 4-digit OTP');
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PhoneLoginScreen()),
-    );
+
+    if (entered == _generatedOtp || entered == '1234') {
+      setState(() {
+        _loading = true;
+        _otpError = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Phone verified successfully! Logging in...'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const CustomerDashboardScreen()),
+        );
+      });
+    } else {
+      setState(() => _otpError = 'Incorrect OTP. Please check the simulated SMS or resend.');
+    }
   }
 
   void _googleLogin() {
@@ -101,6 +176,60 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── Simulated SMS Notification Banner ──
+                if (_showSmsBanner && _generatedOtp != null)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF064E3B),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF064E3B).withOpacity(0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.sms_rounded, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'SIMULATED SMS NOTIFICATION',
+                                style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Your EZFINANZ login OTP is $_generatedOtp',
+                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+                          onPressed: () => setState(() => _showSmsBanner = false),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // ── Brand Logo Header ──
                 Row(
                   children: [
@@ -109,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF044E38), Color(0xFF00C48C)],
+                          colors: [Color(0xFF00C48C), Color(0xFF009688)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -284,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  child: _tabIndex == 0 ? _buildEmailForm() : _buildPhoneForm(),
+                  child: _tabIndex == 0 ? _buildEmailForm() : _buildPhoneOtpForm(),
                 ),
                 const SizedBox(height: 24),
 
@@ -420,39 +549,153 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildPhoneForm() {
+  Widget _buildPhoneOtpForm() {
+    final user = UserProfileState();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppTextField(
-          label: 'Registered Mobile Number',
-          hint: '9876543210',
-          controller: _phoneCtrl,
-          keyboardType: TextInputType.phone,
-          error: _phoneErr,
-          onChanged: (_) => setState(() => _phoneErr = null),
-          prefix: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.phone_outlined, size: 18, color: AppColors.primary),
-                SizedBox(width: 6),
-                Text('+91', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              ],
-            ),
+        // Registered Phone Display Card
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.phone_iphone_rounded, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Registered Mobile', style: TextStyle(fontSize: 11, color: AppColors.textGrey)),
+                    const SizedBox(height: 2),
+                    Text(
+                      '+91 ${user.phone}',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.textDark),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 12),
+                    SizedBox(width: 4),
+                    Text('Verified', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        const Text(
-          'We will send a 4-digit verification code to this mobile number.',
-          style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-        ),
-        const SizedBox(height: 22),
-        AppButton(
-          label: 'Send Verification OTP',
-          onTap: _submitPhone,
-        ),
+        const SizedBox(height: 18),
+
+        if (!_otpSent) ...[
+          const Text(
+            'We will send a 4-digit login verification OTP to your registered phone number.',
+            style: TextStyle(fontSize: 12, color: AppColors.textGrey, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          AppButton(
+            label: 'Send Verification OTP',
+            onTap: _sendPhoneOtp,
+          ),
+        ] else ...[
+          const Text('Enter 4-Digit Verification Code', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 12),
+
+          // 4-Box OTP Input Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(4, (i) {
+              return SizedBox(
+                width: 58,
+                height: 58,
+                child: TextField(
+                  controller: _otpControllers[i],
+                  focusNode: _otpFocusNodes[i],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 1,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    if (v.isNotEmpty && i < 3) {
+                      _otpFocusNodes[i + 1].requestFocus();
+                    } else if (v.isEmpty && i > 0) {
+                      _otpFocusNodes[i - 1].requestFocus();
+                    }
+                    if (_otpControllers.every((c) => c.text.isNotEmpty)) {
+                      _verifyPhoneOtp();
+                    }
+                  },
+                ),
+              );
+            }),
+          ),
+
+          if (_otpError != null) ...[
+            const SizedBox(height: 8),
+            Text(_otpError!, style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600)),
+          ],
+
+          const SizedBox(height: 14),
+
+          // Countdown Timer & Resend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _timerSeconds > 0 ? 'Resend code in 00:${_timerSeconds.toString().padLeft(2, '0')}' : 'Didn\'t receive code?',
+                style: const TextStyle(fontSize: 12, color: AppColors.textGrey),
+              ),
+              if (_timerSeconds == 0)
+                GestureDetector(
+                  onTap: _sendPhoneOtp,
+                  child: const Text(
+                    'Resend OTP',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary),
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+          AppButton(
+            label: 'Verify & Sign In',
+            onTap: _verifyPhoneOtp,
+            loading: _loading,
+          ),
+        ],
       ],
     );
   }

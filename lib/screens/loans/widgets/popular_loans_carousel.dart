@@ -37,7 +37,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
   final PageController _controller = PageController(viewportFraction: 0.88);
   int _currentPage = 0;
 
-  // Harmonious theme-based green gradients and tints
+  // Harmonious theme-matched vibrant green gradients based directly on AppColors.primary (0xFF00C48C)
   static const List<PopularLoanItem> _popularLoans = [
     PopularLoanItem(
       title: 'Instant Personal Loan',
@@ -45,7 +45,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
       rate: '10.5% p.a.',
       tenure: 'Flexible 12-60 mo',
       badge: '🔥 MOST POPULAR',
-      gradientColors: [Color(0xFF044E38), Color(0xFF0D684E)],
+      gradientColors: [Color(0xFF00C48C), Color(0xFF009F72)],
       icon: Icons.flash_on_rounded,
       tagLine: 'Zero collateral · Disbursed in 30 mins',
     ),
@@ -55,7 +55,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
       rate: '7.5% p.a.',
       tenure: 'Tenure up to 30 yrs',
       badge: '⭐ LOWEST RATE',
-      gradientColors: [Color(0xFF064E3B), Color(0xFF047857)],
+      gradientColors: [Color(0xFF00BFA5), Color(0xFF009688)],
       icon: Icons.home_rounded,
       tagLine: 'Minimal processing fee · Instant sanction',
     ),
@@ -65,7 +65,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
       rate: '11.0% p.a.',
       tenure: 'Fast 6-48 mo',
       badge: '⚡ 2-HR DISBURSAL',
-      gradientColors: [Color(0xFF065F46), Color(0xFF059669)],
+      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
       icon: Icons.medical_services_rounded,
       tagLine: 'Hospital bills & treatments covered',
     ),
@@ -75,7 +75,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
       rate: '8.0% p.a.',
       tenure: 'Up to 7 yrs',
       badge: '🚗 100% ON-ROAD',
-      gradientColors: [Color(0xFF0F766E), Color(0xFF115E59)],
+      gradientColors: [Color(0xFF00C48C), Color(0xFF00897B)],
       icon: Icons.directions_car_filled_rounded,
       tagLine: 'Pre-approved car & bike financing',
     ),
@@ -166,7 +166,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: loan.gradientColors.first.withOpacity(0.28),
+            color: loan.gradientColors.first.withOpacity(0.32),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -181,7 +181,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
             child: Icon(
               loan.icon,
               size: 130,
-              color: Colors.white.withOpacity(0.06),
+              color: Colors.white.withOpacity(0.12),
             ),
           ),
           Padding(
@@ -197,9 +197,9 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.18),
+                        color: Colors.white.withOpacity(0.22),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.25)),
+                        border: Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: Text(
                         loan.badge,
@@ -214,11 +214,11 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withOpacity(0.1),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -227,9 +227,9 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                       child: Text(
                         loan.rate,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.primary,
                           fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
@@ -252,9 +252,9 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                     Text(
                       loan.tagLine,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withOpacity(0.9),
                         fontSize: 12,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -271,8 +271,9 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                         Text(
                           'Max Eligible',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withOpacity(0.8),
                             fontSize: 10,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         Text(
@@ -280,7 +281,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ],
@@ -323,7 +324,7 @@ class _PopularLoansCarouselState extends State<PopularLoansCarousel> {
                               style: TextStyle(
                                 color: AppColors.textDark,
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                             SizedBox(width: 4),

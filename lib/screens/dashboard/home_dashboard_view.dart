@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../utils/loan_state.dart';
+import '../../utils/user_state.dart';
 import '../dashboard/notification_screen.dart';
 import '../loans/widgets/popular_loans_carousel.dart';
 import '../loans/apply_loan_flow_screen.dart';
@@ -31,61 +32,67 @@ class HomeDashboardView extends StatelessWidget {
         statusBarIconBrightness: Brightness.light,
         statusBarBrightness: Brightness.dark,
       ),
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Column(
-          children: [
-            // ── Green Header: encompasses greeting AND full credit score card ──
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x2500C48C),
-                    blurRadius: 20,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Status bar top spacer
-                  SizedBox(height: MediaQuery.of(context).padding.top + 8),
+      child: ListenableBuilder(
+        listenable: UserProfileState(),
+        builder: (context, _) {
+          final user = UserProfileState();
+          final firstName = user.fullName.isNotEmpty ? user.fullName.trim().split(' ').first : 'User';
 
-                  // Greeting row
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _greeting(),
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withOpacity(0.85),
-                                  fontWeight: FontWeight.w500,
-                                ),
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: Column(
+              children: [
+                // ── Green Header: encompasses greeting AND full credit score card ──
+                Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x2500C48C),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Status bar top spacer
+                      SizedBox(height: MediaQuery.of(context).padding.top + 8),
+
+                      // Greeting row
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _greeting(),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white.withOpacity(0.85),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Hi, $firstName 👋',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Hi, Aditi 👋',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
                         GestureDetector(
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const NotificationScreen()),
@@ -448,9 +455,11 @@ class HomeDashboardView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  ),
+);
+}
 }
 
 class _Seg extends StatelessWidget {
