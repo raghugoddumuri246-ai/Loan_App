@@ -17,41 +17,61 @@ class EligibilityStepWidget extends StatefulWidget {
 }
 
 class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
-  final _monthlyIncomeCtrl = TextEditingController(text: '65000');
-  final _reqAmountCtrl = TextEditingController(text: '200000');
-  final _cibilScoreCtrl = TextEditingController(text: '752');
-  final _currentDebtsCtrl = TextEditingController(text: '12000');
-  final _employerCtrl = TextEditingController(text: 'TechCorp Solutions Pvt Ltd');
-  final _designationCtrl = TextEditingController(text: 'Senior Software Engineer');
+  // Clean, empty text controllers (user enters their real values)
+  final _monthlyIncomeCtrl = TextEditingController();
+  final _reqAmountCtrl = TextEditingController();
+  final _cibilScoreCtrl = TextEditingController();
+  final _currentDebtsCtrl = TextEditingController();
+  final _employerCtrl = TextEditingController();
+  final _designationCtrl = TextEditingController();
 
   bool _isEligible = true;
-  String _eligibilityMessage = 'Pre-Approved! You qualify for loans up to ₹5,00,000.';
+  String _eligibilityMessage = 'Enter your financial details to calculate loan limit.';
   double _calculatedMaxEligible = 500000;
-  double _dtiRatio = 0.18;
+  double _dtiRatio = 0.0;
+
+  double get _loanTypeCeiling {
+    final title = widget.loanTitle.toLowerCase();
+    if (title.contains('home')) return 7500000;
+    if (title.contains('education')) return 2000000;
+    if (title.contains('auto') || title.contains('car')) return 1500000;
+    if (title.contains('business')) return 2500000;
+    if (title.contains('medical')) return 500000;
+    return 500000; // Personal Loan
+  }
 
   @override
   void initState() {
     super.initState();
+    _calculatedMaxEligible = _loanTypeCeiling;
     _evaluateEligibility();
   }
 
   void _evaluateEligibility() {
-    double income = double.tryParse(_monthlyIncomeCtrl.text.replaceAll(',', '')) ?? 50000;
+    double income = double.tryParse(_monthlyIncomeCtrl.text.replaceAll(',', '')) ?? 0;
     double debts = double.tryParse(_currentDebtsCtrl.text.replaceAll(',', '')) ?? 0;
-    int cibil = int.tryParse(_cibilScoreCtrl.text) ?? 720;
-    double reqAmount = double.tryParse(_reqAmountCtrl.text.replaceAll(',', '')) ?? 200000;
+    int cibil = int.tryParse(_cibilScoreCtrl.text) ?? 740;
+    double reqAmount = double.tryParse(_reqAmountCtrl.text.replaceAll(',', '')) ?? 0;
 
-    double dti = income > 0 ? (debts / income) : 0.2;
+    double dti = income > 0 ? (debts / income) : 0.0;
 
     setState(() {
       _dtiRatio = dti;
+
+      if (income == 0) {
+        _isEligible = true;
+        _calculatedMaxEligible = _loanTypeCeiling;
+        _eligibilityMessage = 'Estimated maximum limit up to ₹${_formatAmount(_loanTypeCeiling)} for ${widget.loanTitle}.';
+        return;
+      }
+
       if (cibil >= 700 && dti <= 0.55) {
         _isEligible = true;
-        _calculatedMaxEligible = min(income * 10, 1000000);
+        _calculatedMaxEligible = min(income * 10, _loanTypeCeiling);
         _eligibilityMessage = 'Pre-Approved! Eligible for instant disbursal up to ₹${_formatAmount(_calculatedMaxEligible)} with prime rates.';
       } else if (cibil >= 620 && dti <= 0.7) {
         _isEligible = true;
-        _calculatedMaxEligible = min(income * 6, 400000);
+        _calculatedMaxEligible = min(income * 6, _loanTypeCeiling * 0.6);
         _eligibilityMessage = 'Eligible for loan approval up to ₹${_formatAmount(_calculatedMaxEligible)}.';
       } else {
         _isEligible = false;
@@ -95,19 +115,19 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
           ),
           const SizedBox(height: 20),
 
-          // Real-time Health Metrics Card (Theme Green)
+          // Real-time Health Metrics Card (Exact Brand Primary Green Gradient)
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF044E38), Color(0xFF0D684E)],
+                colors: [Color(0xFF00C48C), Color(0xFF00966C)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF044E38).withOpacity(0.3),
+                  color: const Color(0xFF00C48C).withOpacity(0.35),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -123,7 +143,7 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
@@ -165,7 +185,7 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                   children: [
                     const Text('Debt-to-Income (DTI)', style: TextStyle(color: Colors.white70, fontSize: 11)),
                     Text(
-                      '${(_dtiRatio * 100).toStringAsFixed(1)}% (Healthy < 50%)',
+                      _dtiRatio > 0 ? '${(_dtiRatio * 100).toStringAsFixed(1)}% (Healthy < 50%)' : '0.0% (Enter Income)',
                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -174,10 +194,10 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: _dtiRatio.clamp(0.0, 1.0),
+                    value: _dtiRatio > 0 ? _dtiRatio.clamp(0.0, 1.0) : 0.05,
                     backgroundColor: Colors.white.withOpacity(0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _dtiRatio <= 0.4 ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                      _dtiRatio <= 0.4 ? Colors.white : const Color(0xFFFBBF24),
                     ),
                     minHeight: 6,
                   ),
@@ -212,7 +232,7 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                 const SizedBox(height: 18),
                 AppTextField(
                   label: 'Monthly Net Take-Home Salary (₹)',
-                  hint: '65,000',
+                  hint: 'e.g. 65000',
                   controller: _monthlyIncomeCtrl,
                   keyboardType: TextInputType.number,
                   prefix: const Icon(Icons.currency_rupee_rounded, size: 18, color: AppColors.primary),
@@ -221,7 +241,7 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                 const SizedBox(height: 14),
                 AppTextField(
                   label: 'Requested Loan Amount (₹)',
-                  hint: '2,00,000',
+                  hint: 'e.g. 200000',
                   controller: _reqAmountCtrl,
                   keyboardType: TextInputType.number,
                   prefix: const Icon(Icons.account_balance_wallet_outlined, size: 18, color: AppColors.primary),
@@ -233,7 +253,7 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                     Expanded(
                       child: AppTextField(
                         label: 'CIBIL Credit Score',
-                        hint: '752',
+                        hint: 'e.g. 750',
                         controller: _cibilScoreCtrl,
                         keyboardType: TextInputType.number,
                         prefix: const Icon(Icons.speed_rounded, size: 18, color: AppColors.primary),
@@ -244,10 +264,10 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                     Expanded(
                       child: AppTextField(
                         label: 'Existing EMIs (₹)',
-                        hint: '12,000',
+                        hint: 'e.g. 10000',
                         controller: _currentDebtsCtrl,
                         keyboardType: TextInputType.number,
-                        prefix: const Icon(Icons.receipt_outlined, size: 18, color: AppColors.primary),
+                        prefix: const Icon(Icons.receipt_long_outlined, size: 18, color: AppColors.primary),
                         onChanged: (_) => _evaluateEligibility(),
                       ),
                     ),
@@ -256,64 +276,30 @@ class _EligibilityStepWidgetState extends State<EligibilityStepWidget> {
                 const SizedBox(height: 14),
                 AppTextField(
                   label: 'Employer / Company Name',
-                  hint: 'TechCorp Solutions Pvt Ltd',
+                  hint: 'e.g. TechCorp Solutions Pvt Ltd',
                   controller: _employerCtrl,
-                  prefix: const Icon(Icons.business_rounded, size: 18, color: AppColors.primary),
+                  prefix: const Icon(Icons.business_outlined, size: 18, color: AppColors.primary),
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  label: 'Current Designation',
-                  hint: 'Senior Software Engineer',
+                  label: 'Designation / Role',
+                  hint: 'e.g. Senior Software Engineer',
                   controller: _designationCtrl,
                   prefix: const Icon(Icons.badge_outlined, size: 18, color: AppColors.primary),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // Real-time Result Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _isEligible ? AppColors.primary.withOpacity(0.08) : AppColors.error.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: _isEligible ? AppColors.primary.withOpacity(0.3) : AppColors.error.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _isEligible ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                  color: _isEligible ? AppColors.primary : AppColors.error,
-                  size: 26,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _eligibilityMessage,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _isEligible ? AppColors.textDark : AppColors.error,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 26),
+          // Status & Next Action Button
           AppButton(
-            label: 'Continue to Repayment Terms',
-            onTap: _isEligible
-                ? () {
-                    double reqAmount = double.tryParse(_reqAmountCtrl.text.replaceAll(',', '')) ?? 200000;
-                    widget.onEligibleConfirmed(_calculatedMaxEligible, reqAmount);
-                  }
-                : null,
+            label: 'Check Eligibility & Continue',
+            onTap: () {
+              double income = double.tryParse(_monthlyIncomeCtrl.text.replaceAll(',', '')) ?? 50000;
+              double req = double.tryParse(_reqAmountCtrl.text.replaceAll(',', '')) ?? (_calculatedMaxEligible > 0 ? _calculatedMaxEligible * 0.6 : 100000);
+              widget.onEligibleConfirmed(_calculatedMaxEligible, req);
+            },
           ),
         ],
       ),

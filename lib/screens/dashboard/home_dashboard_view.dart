@@ -246,98 +246,196 @@ class HomeDashboardView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Active Loan Card with 1-Click Pay Action
+                    // Dynamic Active Loan / Application Status Card
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text('Active Personal Loan', style: TextStyle(color: AppColors.textGrey, fontSize: 12)),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        '₹85,000',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppColors.textDark,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.check_circle_rounded, size: 13, color: AppColors.primary),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'On track',
-                                        style: TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(color: AppColors.border, height: 1),
-                            const SizedBox(height: 12),
+                      child: Builder(
+                        builder: (context) {
+                          final appliedLoans = LoanState().appliedLoans;
 
-                            // Upcoming EMI Action Strip
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: const [
-                                    Icon(Icons.event_rounded, size: 16, color: AppColors.primary),
-                                    SizedBox(width: 6),
-                                    Text('Next EMI: ₹3,500 due 14 Aug', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          if (appliedLoans.isEmpty) {
+                            // No Loans Yet: Show Pre-Approved Loan Offer
+                            return Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.primary.withOpacity(0.12),
+                                    AppColors.primary.withOpacity(0.04),
                                   ],
                                 ),
-                                GestureDetector(
-                                  onTap: onNavigateToHistory,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: AppColors.primary.withOpacity(0.15),
+                                      shape: BoxShape.circle,
                                     ),
-                                    child: const Text('Pay Now', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                                    child: const Icon(Icons.stars_rounded, color: AppColors.primary, size: 26),
                                   ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text('Pre-Approved Offer', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
+                                        SizedBox(height: 2),
+                                        Text('Up to ₹5,00,000 Available', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                                        SizedBox(height: 2),
+                                        Text('Instant paperless disbursal at 10.5% p.a.', style: TextStyle(fontSize: 11, color: AppColors.textGrey)),
+                                      ],
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: onNavigateToLoans ??
+                                        () => Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => const ApplyLoanFlowScreen(
+                                                  loanTitle: 'Personal Loan',
+                                                  maxAmount: '5,00,000',
+                                                  defaultRate: '10.5%',
+                                                ),
+                                              ),
+                                            ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Text('Apply', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // Real user loan card
+                          final latestLoan = appliedLoans.first;
+                          final isReview = latestLoan.status.toLowerCase().contains('review') || latestLoan.status.toLowerCase().contains('applied');
+
+                          return Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            latestLoan.title,
+                                            style: const TextStyle(color: AppColors.textGrey, fontSize: 12),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            latestLoan.amount,
+                                            style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w900,
+                                              color: AppColors.textDark,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isReview
+                                            ? const Color(0xFFF59E0B).withOpacity(0.12)
+                                            : AppColors.primary.withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            isReview ? Icons.hourglass_top_rounded : Icons.check_circle_rounded,
+                                            size: 13,
+                                            color: isReview ? const Color(0xFFD97706) : AppColors.primary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            latestLoan.status,
+                                            style: TextStyle(
+                                              color: isReview ? const Color(0xFFD97706) : AppColors.primary,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                const Divider(color: AppColors.border, height: 1),
+                                const SizedBox(height: 12),
+
+                                // Action Strip
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            isReview ? Icons.schedule_rounded : Icons.event_rounded,
+                                            size: 16,
+                                            color: isReview ? const Color(0xFFD97706) : AppColors.primary,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              isReview
+                                                  ? 'Underwriting review in progress'
+                                                  : 'Next EMI: ${latestLoan.emi}',
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: onNavigateToHistory,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: isReview ? const Color(0xFF0F172A) : AppColors.primary,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          isReview ? 'View Status' : 'Pay Now',
+                                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
 
@@ -432,6 +530,37 @@ class HomeDashboardView extends StatelessWidget {
                         listenable: LoanState(),
                         builder: (context, _) {
                           final activities = LoanState().activities;
+
+                          if (activities.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.notifications_none_rounded, color: AppColors.primary, size: 20),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'No recent activity. Actions and applications will appear here.',
+                                      style: TextStyle(color: AppColors.textGrey, fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
                           return Column(
                             children: activities.map((act) {
                               return Padding(
@@ -449,6 +578,92 @@ class HomeDashboardView extends StatelessWidget {
                         },
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Loan Calculation Formulas & Underwriting Section ──
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.calculate_rounded, color: AppColors.primary, size: 18),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Financial Calculation Formulas',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Formulas Container Card
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.02),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Formula 1: EMI Calculation
+                                _buildFormulaItem(
+                                  badge: 'EMI',
+                                  title: 'Equated Monthly Installment',
+                                  formula: 'EMI = [P × r × (1 + r)ⁿ] ÷ [(1 + r)ⁿ - 1]',
+                                  description: 'P = Principal Amount, r = Monthly Interest (Annual Rate ÷ 12 ÷ 100), n = Tenure in Months.',
+                                  accentColor: AppColors.primary,
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: Divider(color: AppColors.border, height: 1),
+                                ),
+
+                                // Formula 2: Debt-to-Income (DTI)
+                                _buildFormulaItem(
+                                  badge: 'DTI',
+                                  title: 'Debt-to-Income Ratio',
+                                  formula: 'DTI = (Total Monthly EMIs ÷ Net Monthly Income) × 100%',
+                                  description: 'Healthy score < 40%. Lower DTI unlocks higher loan eligibility and lowest interest rates.',
+                                  accentColor: const Color(0xFF3D8EF0),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: Divider(color: AppColors.border, height: 1),
+                                ),
+
+                                // Formula 3: Loan Eligibility Limit
+                                _buildFormulaItem(
+                                  badge: 'LIMIT',
+                                  title: 'Maximum Loan Eligibility',
+                                  formula: 'Max Limit = Min(Monthly Income × 10, Product Ceiling)',
+                                  description: 'Evaluated in real-time based on CIBIL credit score (700+ prime), employment stability, and DTI capacity.',
+                                  accentColor: const Color(0xFFF59E0B),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -460,6 +675,69 @@ class HomeDashboardView extends StatelessWidget {
   ),
 );
 }
+
+  Widget _buildFormulaItem({
+    required String badge,
+    required String title,
+    required String formula,
+    required String description,
+    required Color accentColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  color: accentColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textDark),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Text(
+            formula,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              color: Color(0xFF0F172A),
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          description,
+          style: const TextStyle(fontSize: 11, color: AppColors.textGrey, height: 1.35),
+        ),
+      ],
+    );
+  }
 }
 
 class _Seg extends StatelessWidget {

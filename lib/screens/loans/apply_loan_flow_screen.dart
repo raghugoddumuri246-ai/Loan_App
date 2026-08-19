@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../utils/loan_state.dart';
+import '../../services/api_service.dart';
 import 'widgets/eligibility_step_widget.dart';
 import 'widgets/emi_calculator_widget.dart';
 import 'widgets/bank_step_widget.dart';
@@ -53,13 +54,13 @@ class _ApplyLoanFlowScreenState extends State<ApplyLoanFlowScreen> {
     }
   }
 
-  void _submitFinalApplication() {
+  Future<void> _submitFinalApplication() async {
     final generatedId = '#EZ-${Random().nextInt(8999) + 1000}';
     final newLoan = AppliedLoanModel(
       title: widget.loanTitle,
       amount: '₹${_formatAmount(_selectedLoanAmount)}',
       date: 'Today',
-      status: 'Applied',
+      status: 'Waiting for Admin Review',
       id: generatedId,
       tenure: '$_selectedTenureMonths months',
       rate: '$_annualInterestRate%',
@@ -69,6 +70,20 @@ class _ApplyLoanFlowScreenState extends State<ApplyLoanFlowScreen> {
     );
 
     LoanState().addAppliedLoan(newLoan);
+
+    // Push to MongoDB Atlas backend in parallel
+    ApiService().applyLoan(
+      loanTitle: widget.loanTitle,
+      requestedAmount: _selectedLoanAmount,
+      tenureMonths: _selectedTenureMonths,
+      interestRate: '$_annualInterestRate%',
+      disbursalBank: {
+        'bankName': _bankName,
+        'accountNumber': _accountNumber,
+        'ifscCode': _ifscCode,
+        'holderName': _bankHolderName,
+      },
+    );
 
     setState(() {
       _currentStep = 6;

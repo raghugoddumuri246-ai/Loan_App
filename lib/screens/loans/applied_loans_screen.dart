@@ -94,65 +94,76 @@ class _AppliedLoansScreenState extends State<AppliedLoansScreen> {
                   color: Colors.white.withOpacity(0.18),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
-                  children: List.generate(_tabs.length, (i) {
-                    final sel = _tab == i;
-                    final label = _tabs[i];
-                    final count = LoanState().appliedLoans.where((l) => l.status == label).length;
+                child: ListenableBuilder(
+                  listenable: LoanState(),
+                  builder: (context, _) {
+                    final allLoans = LoanState().appliedLoans;
 
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _tab = i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          decoration: BoxDecoration(
-                            color: sel ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: sel
-                                ? [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.08),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: sel ? AppColors.primary : Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: sel ? AppColors.primary.withOpacity(0.12) : Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '$count',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      color: sel ? AppColors.primary : Colors.white,
+                    return Row(
+                      children: List.generate(_tabs.length, (i) {
+                        final sel = _tab == i;
+                        final label = _tabs[i];
+                        final count = i == 0
+                            ? allLoans.where((l) => l.status == 'Applied' || l.status.toLowerCase().contains('review')).length
+                            : i == 1
+                                ? allLoans.where((l) => l.status == 'Approved' || l.status == 'Disbursed').length
+                                : allLoans.where((l) => l.status == 'Cancelled').length;
+
+                        return Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _tab = i),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              decoration: BoxDecoration(
+                                color: sel ? Colors.white : Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: sel
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: sel ? AppColors.primary : Colors.white,
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: sel ? AppColors.primary.withOpacity(0.12) : Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '$count',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: sel ? AppColors.primary : Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      }),
                     );
-                  }),
+                  },
                 ),
               ),
             ),
@@ -173,7 +184,11 @@ class _AppliedLoansScreenState extends State<AppliedLoansScreen> {
                   builder: (context, _) {
                     final allLoans = LoanState().appliedLoans;
                     final label = _tabs[_tab];
-                    final filtered = allLoans.where((l) => l.status == label).toList();
+                    final filtered = _tab == 0
+                        ? allLoans.where((l) => l.status == 'Applied' || l.status.toLowerCase().contains('review')).toList()
+                        : _tab == 1
+                            ? allLoans.where((l) => l.status == 'Approved' || l.status == 'Disbursed').toList()
+                            : allLoans.where((l) => l.status == 'Cancelled').toList();
 
                     if (filtered.isEmpty) {
                       return Center(
@@ -191,12 +206,14 @@ class _AppliedLoansScreenState extends State<AppliedLoansScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No $label Loans',
+                              allLoans.isEmpty ? 'No Loans Applied Yet' : 'No $label Loans',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textDark),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'You have no applications under "$label" status.',
+                              allLoans.isEmpty
+                                  ? 'Explore our loan offers and apply with instant approval.'
+                                  : 'You have no applications under "$label" status.',
                               style: const TextStyle(color: AppColors.textGrey, fontSize: 13),
                             ),
                           ],

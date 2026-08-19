@@ -2,48 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
 import '../../utils/user_state.dart';
-import '../auth/login_screen.dart';
+import '../../utils/loan_state.dart';
 import 'edit_profile_screen.dart';
 
 /// Customer Profile Screen.
 ///
-/// Displays complete unmasked user credentials, credit rating tier, active loan status,
-/// verified government IDs (Aadhaar, PAN), disbursal bank accounts, and support options.
-/// Reactively updates via [UserProfileState] whenever edits occur.
+/// Displays real-time verified customer demographics, employment profile,
+/// unmasked government identifiers (Aadhaar, PAN), and registered disbursal bank details.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
-
-  /// Shows confirmation alert before clearing session and navigating to LoginScreen.
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Log Out?', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('Are you sure you want to log out of your EZFINANZ account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textGrey, fontWeight: FontWeight.w600)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (r) => false,
-              );
-            },
-            child: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,14 +23,17 @@ class ProfileScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.primary,
         body: ListenableBuilder(
-          listenable: UserProfileState(),
+          listenable: Listenable.merge([UserProfileState(), LoanState()]),
           builder: (context, _) {
             final user = UserProfileState();
+            final loanState = LoanState();
 
             // Extract uppercase initials for avatar
             final initials = user.fullName.isNotEmpty
                 ? user.fullName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
                 : 'U';
+
+            final activeLoansCount = loanState.appliedLoans.length;
 
             return Column(
               children: [
@@ -90,18 +60,19 @@ class ProfileScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
+                          if (user.isKycVerified)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.verified_rounded, color: AppColors.primary, size: 16),
                               ),
-                              child: const Icon(Icons.verified_rounded, color: AppColors.primary, size: 16),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(width: 16),
@@ -112,7 +83,7 @@ class ProfileScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user.fullName,
+                              user.fullName.isNotEmpty ? user.fullName : 'Customer Account',
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -121,7 +92,11 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '+91 ${user.phone} · ${user.email}',
+                              user.phone.isNotEmpty
+                                  ? '+91 ${user.phone}${user.email.isNotEmpty ? ' · ${user.email}' : ''}'
+                                  : user.email.isNotEmpty
+                                      ? user.email
+                                      : 'Profile Incomplete',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white.withOpacity(0.85),
@@ -134,9 +109,9 @@ class ProfileScreen extends StatelessWidget {
                                 color: Colors.white.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
-                                '🛡️ Verified Customer · Tier 1',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              child: Text(
+                                user.isKycVerified ? '🛡️ Verified Customer · Tier 1' : '⏳ KYC Pending',
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
@@ -195,7 +170,7 @@ class ProfileScreen extends StatelessWidget {
                             children: [
                               _StatBox(label: 'CIBIL Score', val: '${user.cibilScore}'),
                               const _VLine(),
-                              const _StatBox(label: 'Active Loans', val: '1 Loan'),
+                              _StatBox(label: 'Active Loans', val: '$activeLoansCount ${activeLoansCount == 1 ? 'Loan' : 'Loans'}'),
                               const _VLine(),
                               const _StatBox(label: 'Repayment', val: '100% On-Time'),
                             ],
@@ -211,20 +186,36 @@ class ProfileScreen extends StatelessWidget {
                             MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                           ),
                           items: [
-                            _Tile(label: 'Full Name', val: user.fullName),
-                            _Tile(label: 'Date of Birth', val: user.dob),
+                            _Tile(label: 'Full Name', val: user.fullName.isNotEmpty ? user.fullName : 'Not Added'),
+                            _Tile(label: 'Date of Birth', val: user.dob.isNotEmpty ? user.dob : 'Not Added'),
                             _Tile(label: 'Gender', val: user.gender),
-                            _Tile(label: 'Mobile Number', val: '+91 ${user.phone}', badge: 'Verified ✓'),
-                            _Tile(label: 'Email Address', val: user.email, badge: 'Verified ✓'),
-                            _Tile(label: 'Employer', val: user.employer),
-                            _Tile(label: 'Designation', val: user.designation),
-                            _Tile(label: 'Monthly Net Income', val: '₹${user.monthlyIncome.toStringAsFixed(0)}'),
-                            _Tile(label: 'Residential Address', val: '${user.address}, ${user.cityPincode}'),
+                            _Tile(
+                              label: 'Mobile Number',
+                              val: user.phone.isNotEmpty ? '+91 ${user.phone}' : 'Not Added',
+                              badge: user.isPhoneVerified ? 'Verified ✓' : null,
+                            ),
+                            _Tile(
+                              label: 'Email Address',
+                              val: user.email.isNotEmpty ? user.email : 'Not Added',
+                              badge: user.isEmailVerified ? 'Verified ✓' : null,
+                            ),
+                            _Tile(label: 'Employer', val: user.employer.isNotEmpty ? user.employer : 'Not Added'),
+                            _Tile(label: 'Designation', val: user.designation.isNotEmpty ? user.designation : 'Not Added'),
+                            _Tile(
+                              label: 'Monthly Net Income',
+                              val: user.monthlyIncome > 0 ? '₹${user.monthlyIncome.toStringAsFixed(0)}' : 'Not Added',
+                            ),
+                            _Tile(
+                              label: 'Residential Address',
+                              val: user.address.isNotEmpty
+                                  ? '${user.address}${user.cityPincode.isNotEmpty ? ', ${user.cityPincode}' : ''}'
+                                  : 'Not Added',
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
 
-                        // Section 2: Disbursal Bank Account Details (Unmasked)
+                        // Section 2: Disbursal Bank Account Details
                         _SectionCard(
                           title: 'Bank & Auto-Debit (e-NACH)',
                           icon: Icons.account_balance_rounded,
@@ -232,15 +223,29 @@ class ProfileScreen extends StatelessWidget {
                             MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                           ),
                           items: [
-                            _Tile(label: 'Bank Name', val: user.bankName, badge: 'Primary'),
-                            _Tile(label: 'Account Number', val: user.accountNumber),
-                            _Tile(label: 'Branch IFSC', val: user.ifscCode),
-                            const _Tile(label: 'e-Mandate Status', val: 'Active (Auto-Debit Enabled)', isGreen: true),
+                            _Tile(
+                              label: 'Bank Name',
+                              val: user.bankName.isNotEmpty ? user.bankName : 'Not Added',
+                              badge: user.bankName.isNotEmpty ? 'Primary' : null,
+                            ),
+                            _Tile(
+                              label: 'Account Number',
+                              val: user.accountNumber.isNotEmpty ? user.accountNumber : 'Not Added',
+                            ),
+                            _Tile(
+                              label: 'Branch IFSC',
+                              val: user.ifscCode.isNotEmpty ? user.ifscCode : 'Not Added',
+                            ),
+                            _Tile(
+                              label: 'e-Mandate Status',
+                              val: user.accountNumber.isNotEmpty ? 'Active (Auto-Debit Enabled)' : 'Setup Pending',
+                              isGreen: user.accountNumber.isNotEmpty,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
 
-                        // Section 3: KYC & Government Identifiers (Unmasked)
+                        // Section 3: KYC & Government Identifiers
                         _SectionCard(
                           title: 'KYC & Government IDs',
                           icon: Icons.shield_outlined,
@@ -250,57 +255,25 @@ class ProfileScreen extends StatelessWidget {
                           items: [
                             _Tile(
                               label: 'Aadhaar Card',
-                              val: user.aadhaarNumber,
-                              badge: user.isAadhaarVerified ? 'Verified 🛡️' : 'Pending',
+                              val: user.aadhaarNumber.isNotEmpty ? user.aadhaarNumber : 'Not Added',
+                              badge: user.isAadhaarVerified ? 'Verified 🛡️' : 'Unverified',
                             ),
                             _Tile(
                               label: 'PAN Card',
-                              val: user.panNumber,
-                              badge: user.isPanVerified ? 'Verified 🛡️' : 'Pending',
+                              val: user.panNumber.isNotEmpty ? user.panNumber : 'Not Added',
+                              badge: user.isPanVerified ? 'Verified 🛡️' : 'Unverified',
                             ),
-                            const _Tile(label: 'Live Photo Check', val: 'Passed (99.8% Match)', isGreen: true),
+                            _Tile(
+                              label: 'ID Proof Document',
+                              val: user.kycDocumentPath != null || user.isKycVerified ? 'Stored in Database' : 'Pending Upload',
+                              isGreen: user.isKycVerified,
+                            ),
+                            _Tile(
+                              label: 'Live Face Verification',
+                              val: user.livePhotoPath != null ? 'Verified · 99.8% Liveness' : 'Not Captured',
+                              isGreen: user.livePhotoPath != null,
+                            ),
                           ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Section 4: Customer Support & Policies
-                        const _SectionCard(
-                          title: 'Help & Customer Support',
-                          icon: Icons.headset_mic_outlined,
-                          items: [
-                            _Tile(label: '24/7 Priority Support', val: 'support@ezfinanz.com'),
-                            _Tile(label: 'Toll-Free Helpline', val: '1800-123-4567'),
-                            _Tile(label: 'FAQ & Loan Guides', val: 'View Articles'),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Log Out Action Button
-                        GestureDetector(
-                          onTap: () => _confirmLogout(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.error.withOpacity(0.2)),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Log Out of Account',
-                                  style: TextStyle(
-                                    color: AppColors.error,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ],
                     ),
@@ -315,35 +288,48 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-/// Stat metric display box
 class _StatBox extends StatelessWidget {
   final String label, val;
   const _StatBox({required this.label, required this.val});
+
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textGrey)),
-          const SizedBox(height: 2),
-          Text(val, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-        ],
-      );
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textGrey, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+      ],
+    );
+  }
 }
 
-/// Vertical separator line
 class _VLine extends StatelessWidget {
   const _VLine();
   @override
-  Widget build(BuildContext context) => Container(width: 1, height: 24, color: AppColors.border);
+  Widget build(BuildContext context) => Container(width: 1, height: 28, color: AppColors.border);
 }
 
-/// Grouped visual section card
+class _Tile {
+  final String label;
+  final String val;
+  final String? badge;
+  final bool isGreen;
+  const _Tile({required this.label, required this.val, this.badge, this.isGreen = false});
+}
+
 class _SectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
-  final List<_Tile> items;
   final VoidCallback? onEdit;
+  final List<_Tile> items;
 
-  const _SectionCard({required this.title, required this.icon, required this.items, this.onEdit});
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    this.onEdit,
+    required this.items,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -355,29 +341,25 @@ class _SectionCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Section Title Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(icon, color: AppColors.primary, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textDark),
-                    ),
-                  ],
+                Icon(icon, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textDark),
                 ),
+                const Spacer(),
                 if (onEdit != null)
                   GestureDetector(
                     onTap: onEdit,
@@ -416,7 +398,11 @@ class _SectionCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: item.isGreen ? AppColors.primary : AppColors.textDark,
+                              color: item.isGreen
+                                  ? AppColors.primary
+                                  : item.val == 'Not Added' || item.val == 'Not Captured'
+                                      ? AppColors.textLight
+                                      : AppColors.textDark,
                             ),
                           ),
                         ),
@@ -425,12 +411,18 @@ class _SectionCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.12),
+                              color: item.badge!.contains('Unverified')
+                                  ? Colors.grey.withOpacity(0.15)
+                                  : AppColors.primary.withOpacity(0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               item.badge!,
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: item.badge!.contains('Unverified') ? AppColors.textGrey : AppColors.primary,
+                              ),
                             ),
                           ),
                         ],
@@ -445,12 +437,4 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Data row item model
-class _Tile {
-  final String label, val;
-  final String? badge;
-  final bool isGreen;
-  const _Tile({required this.label, required this.val, this.badge, this.isGreen = false});
 }

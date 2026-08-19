@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 /// This singleton class maintains the complete profile information of the logged-in customer.
 /// By extending [ChangeNotifier], any UI widget listening to this state (like Home, Profile,
 /// Loan Flow, KYC) will automatically re-render whenever profile attributes are updated.
-///
-/// When connecting with a Node.js/REST backend in future phases, these methods can be hooked
-/// directly to API calls (e.g. `POST /api/user/profile`, `PUT /api/user/kyc`).
 class UserProfileState extends ChangeNotifier {
   // Singleton pattern initialization
   static final UserProfileState _instance = UserProfileState._internal();
@@ -15,51 +12,49 @@ class UserProfileState extends ChangeNotifier {
   UserProfileState._internal();
 
   // -------------------------------------------------------------
-  // Personal & Contact Information
+  // Personal & Contact Information (Real-time, starts empty until entered)
   // -------------------------------------------------------------
-  String fullName = 'Aditi Sharma';
-  String email = 'aditi@example.com';
-  String phone = '9876543210';
-  String dob = '15/06/1995';
+  String fullName = '';
+  String email = '';
+  String phone = '';
+  String dob = '';
   String gender = 'Female';
-  String address = 'Flat 402, Green Glen Layout, Bellandur';
-  String cityPincode = 'Bangalore - 560103';
+  String address = '';
+  String cityPincode = '';
 
   // -------------------------------------------------------------
   // Employment & Financial Profile
   // -------------------------------------------------------------
-  String employer = 'TechCorp Solutions Pvt Ltd';
-  String designation = 'Senior Software Engineer';
-  double monthlyIncome = 65000.0;
+  String employer = '';
+  String designation = '';
+  double monthlyIncome = 0.0;
   int cibilScore = 742;
-  double activeLoanAmount = 85000.0;
-  double eligibleLoanAmount = 250000.0;
+  double activeLoanAmount = 0.0;
+  double eligibleLoanAmount = 500000.0;
 
   // -------------------------------------------------------------
-  // KYC & Statutory Government Identifiers (Unmasked)
+  // KYC & Statutory Government Identifiers
   // -------------------------------------------------------------
   String idType = 'Aadhaar Card';
-  String idNumber = '5482 9102 3847';
-  String aadhaarNumber = '5482 9102 3847';
-  String panNumber = 'ABCDE1234F';
-  bool isKycVerified = true;
-  bool isPhoneVerified = true;
-  bool isEmailVerified = true;
-  bool isAadhaarVerified = true;
-  bool isPanVerified = true;
-
-  // -------------------------------------------------------------
-  // Disbursal Bank Account Details (Unmasked)
-  // -------------------------------------------------------------
-  String bankName = 'State Bank of India';
-  String accountNumber = '987654321098';
-  String ifscCode = 'SBIN0001234';
+  String idNumber = '';
+  String aadhaarNumber = '';
+  String panNumber = '';
+  bool isKycVerified = false;
+  bool isPhoneVerified = false;
+  bool isEmailVerified = false;
+  bool isAadhaarVerified = false;
+  bool isPanVerified = false;
+  String? kycDocumentPath;
   String? livePhotoPath;
 
+  // -------------------------------------------------------------
+  // Disbursal Bank Account Details
+  // -------------------------------------------------------------
+  String bankName = '';
+  String accountNumber = '';
+  String ifscCode = '';
+
   /// Updates profile attributes dynamically and notifies all UI listeners across the app.
-  ///
-  /// Call this whenever the user submits the edit profile form, completes KYC,
-  /// or modifies bank account details.
   void updateProfile({
     String? newFullName,
     String? newEmail,
@@ -71,16 +66,23 @@ class UserProfileState extends ChangeNotifier {
     String? newEmployer,
     String? newDesignation,
     double? newMonthlyIncome,
+    int? newCibilScore,
+    double? newActiveLoanAmount,
+    double? newEligibleLoanAmount,
     String? newIdType,
     String? newIdNumber,
     String? newAadhaarNumber,
     String? newPanNumber,
+    bool? newIsKycVerified,
+    bool? newIsPhoneVerified,
+    bool? newIsEmailVerified,
     bool? newIsAadhaarVerified,
     bool? newIsPanVerified,
+    String? newKycDocumentPath,
+    String? newLivePhotoPath,
     String? newBankName,
     String? newAccountNumber,
     String? newIfscCode,
-    String? newLivePhotoPath,
   }) {
     if (newFullName != null) fullName = newFullName;
     if (newEmail != null) email = newEmail;
@@ -92,18 +94,24 @@ class UserProfileState extends ChangeNotifier {
     if (newEmployer != null) employer = newEmployer;
     if (newDesignation != null) designation = newDesignation;
     if (newMonthlyIncome != null) monthlyIncome = newMonthlyIncome;
+    if (newCibilScore != null) cibilScore = newCibilScore;
+    if (newActiveLoanAmount != null) activeLoanAmount = newActiveLoanAmount;
+    if (newEligibleLoanAmount != null) eligibleLoanAmount = newEligibleLoanAmount;
     if (newIdType != null) idType = newIdType;
     if (newIdNumber != null) idNumber = newIdNumber;
     if (newAadhaarNumber != null) aadhaarNumber = newAadhaarNumber;
     if (newPanNumber != null) panNumber = newPanNumber;
+    if (newIsKycVerified != null) isKycVerified = newIsKycVerified;
+    if (newIsPhoneVerified != null) isPhoneVerified = newIsPhoneVerified;
+    if (newIsEmailVerified != null) isEmailVerified = newIsEmailVerified;
     if (newIsAadhaarVerified != null) isAadhaarVerified = newIsAadhaarVerified;
     if (newIsPanVerified != null) isPanVerified = newIsPanVerified;
+    if (newKycDocumentPath != null) kycDocumentPath = newKycDocumentPath;
+    if (newLivePhotoPath != null) livePhotoPath = newLivePhotoPath;
     if (newBankName != null) bankName = newBankName;
     if (newAccountNumber != null) accountNumber = newAccountNumber;
     if (newIfscCode != null) ifscCode = newIfscCode;
-    if (newLivePhotoPath != null) livePhotoPath = newLivePhotoPath;
 
-    // Broadcast changes to all active screens
     notifyListeners();
   }
 }

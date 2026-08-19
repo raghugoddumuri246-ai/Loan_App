@@ -42,103 +42,75 @@ class RecentActivityModel {
   });
 }
 
+/// Central State Manager for Applied Loans and Real-Time Activities.
+/// Starts completely clean and receives live data when a user applies or syncs with the database.
 class LoanState extends ChangeNotifier {
   static final LoanState _instance = LoanState._internal();
   factory LoanState() => _instance;
   LoanState._internal();
 
-  final List<AppliedLoanModel> _appliedLoans = [
-    AppliedLoanModel(
-      title: 'Personal Loan',
-      amount: '₹1,00,000',
-      date: '12 Mar 2024',
-      status: 'Applied',
-      id: '#EZ-7821',
-      tenure: '24 months',
-      rate: '10.5%',
-      emi: '₹4,638',
-    ),
-    AppliedLoanModel(
-      title: 'Auto Loan',
-      amount: '₹4,50,000',
-      date: '5 Feb 2024',
-      status: 'Approved',
-      id: '#EZ-7654',
-      tenure: '60 months',
-      rate: '8.0%',
-      emi: '₹9,124',
-    ),
-    AppliedLoanModel(
-      title: 'Home Loan',
-      amount: '₹22,00,000',
-      date: '10 Jan 2024',
-      status: 'Cancelled',
-      id: '#EZ-7412',
-      tenure: '20 years',
-      rate: '7.5%',
-      emi: '₹17,720',
-    ),
-    AppliedLoanModel(
-      title: 'Education Loan',
-      amount: '₹8,00,000',
-      date: '2 Nov 2023',
-      status: 'Applied',
-      id: '#EZ-7189',
-      tenure: '84 months',
-      rate: '9.0%',
-      emi: '₹12,890',
-    ),
-    AppliedLoanModel(
-      title: 'Medical Loan',
-      amount: '₹75,000',
-      date: '15 Oct 2023',
-      status: 'Approved',
-      id: '#EZ-7001',
-      tenure: '18 months',
-      rate: '11.0%',
-      emi: '₹4,538',
-    ),
-  ];
-
-  final List<RecentActivityModel> _activities = [
-    RecentActivityModel(
-      icon: Icons.check_circle_outline_rounded,
-      color: const Color(0xFF00C48C),
-      title: 'EMI Paid',
-      sub: '12 Jul',
-      amount: '-₹7,200',
-    ),
-    RecentActivityModel(
-      icon: Icons.arrow_circle_up_outlined,
-      color: const Color(0xFF3D8EF0),
-      title: 'Loan Disbursed',
-      sub: '2 Jul',
-      amount: '+₹85,000',
-    ),
-    RecentActivityModel(
-      icon: Icons.schedule_rounded,
-      color: const Color(0xFFF6A623),
-      title: 'EMI Due',
-      sub: '14 Aug',
-      amount: '₹3,500',
-    ),
-  ];
+  final List<AppliedLoanModel> _appliedLoans = [];
+  final List<RecentActivityModel> _activities = [];
 
   List<AppliedLoanModel> get appliedLoans => List.unmodifiable(_appliedLoans);
   List<RecentActivityModel> get activities => List.unmodifiable(_activities);
 
+  /// Adds a newly applied loan and creates a corresponding recent activity item.
   void addAppliedLoan(AppliedLoanModel loan) {
     _appliedLoans.insert(0, loan);
+
+    // Create real activity entry for the dashboard
     _activities.insert(
       0,
       RecentActivityModel(
-        icon: Icons.hourglass_top_rounded,
-        color: const Color(0xFFF6A623),
+        icon: Icons.schedule_rounded,
+        color: const Color(0xFFD97706),
         title: '${loan.title} Applied',
-        sub: 'Today (Under Review)',
+        sub: 'Today · ${loan.id}',
         amount: loan.amount,
       ),
     );
+
+    notifyListeners();
+  }
+
+  /// Updates loan status (e.g. When approved by admin)
+  void updateLoanStatus(String loanId, String newStatus) {
+    final idx = _appliedLoans.indexWhere((l) => l.id == loanId);
+    if (idx != -1) {
+      final old = _appliedLoans[idx];
+      _appliedLoans[idx] = AppliedLoanModel(
+        title: old.title,
+        amount: old.amount,
+        date: old.date,
+        status: newStatus,
+        id: old.id,
+        tenure: old.tenure,
+        rate: old.rate,
+        emi: old.emi,
+        bank: old.bank,
+        accountNumber: old.accountNumber,
+      );
+
+      _activities.insert(
+        0,
+        RecentActivityModel(
+          icon: Icons.verified_rounded,
+          color: const Color(0xFF00C48C),
+          title: '${old.title} $newStatus',
+          sub: 'Today',
+          amount: old.amount,
+        ),
+      );
+
+      notifyListeners();
+    }
+  }
+
+  /// Clears all loans (e.g. On user logout)
+  void clear() {
+    _appliedLoans.clear();
+    _activities.clear();
     notifyListeners();
   }
 }
