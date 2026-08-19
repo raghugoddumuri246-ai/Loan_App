@@ -5,188 +5,263 @@ class LoanStatusScreen extends StatelessWidget {
   final String loanId;
   final String status;
   final String type;
+  const LoanStatusScreen({Key? key, required this.loanId, required this.status, required this.type})
+      : super(key: key);
 
-  const LoanStatusScreen({Key? key, required this.loanId, required this.status, required this.type}) : super(key: key);
+  int get _step {
+    switch (status) {
+      case 'Approved': return 3;
+      case 'Cancelled': return 1;
+      default: return 1;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF00D09C), // Theme green top
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.white),
-        title: const Text(
-          'Loan Tracker',
-          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context),
         ),
-        centerTitle: true,
+        title: const Text('Loan Details'),
       ),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Status Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Application ID: $loanId', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  Text(type, style: const TextStyle(color: AppColors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                  // Status strip
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(loanId,
+                                    style: const TextStyle(
+                                        fontSize: 13, color: AppColors.textGrey)),
+                                const SizedBox(height: 2),
+                                Text(type,
+                                    style: const TextStyle(
+                                        fontSize: 18, fontWeight: FontWeight.w700,
+                                        color: AppColors.textDark)),
+                              ],
+                            ),
+                            _StatusBadge(status: status),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        _StepTracker(currentStep: _step),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  // Amount card
+                  Row(
+                    children: [
+                      Expanded(child: _InfoCard(label: 'Sanctioned', value: '₹1,00,000')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _InfoCard(label: 'Tenure', value: '24 months')),
+                      const SizedBox(width: 12),
+                      Expanded(child: _InfoCard(label: 'Rate', value: '10.5% p.a.')),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Text('Fee Breakdown',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                          color: AppColors.textDark)),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      children: const [
+                        _FeeRow('Processing Fee', '₹500', false),
+                        _FeeRow('Onboarding Fee', '₹500', false),
+                        _FeeRow('Agreement Fee', '₹500', false),
+                        _FeeRow('GST (18% on fees)', '₹270', false),
+                        _FeeRow('Total Interest', '₹11,340', false),
+                        _FeeRow('First EMI Date', '7 Aug 2024', true),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 16),
+                  _SummaryRow('Disbursal Amount', '₹97,730'),
+                  const SizedBox(height: 12),
+                  _SummaryRow('Total Repayment', '₹1,12,570'),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
-            
-            // White Container Body
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF2FBF6),
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Tracking Timeline Card
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 8))
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Current Status: $status',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
-                            ),
-                            const SizedBox(height: 32),
-                            _buildTimelineTracking(status),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Loan Description Paragraph
-                      const Text('About This Application', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                      const SizedBox(height: 12),
-                      Text(
-                        'This $type application was initiated to provide you with the financial support necessary to achieve your personal goals. The requested loan features a competitive interest rate and a flexible repayment schedule tailored to your financial profile.',
-                        style: const TextStyle(fontSize: 14, color: AppColors.textLight, height: 1.6),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Detailed Info Card
-                      const Text('Application Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.borderGrey)
-                        ),
-                        child: Column(
-                          children: [
-                            _buildInfoRow('Applicant Name', 'John Doe'),
-                            const Divider(height: 24),
-                            _buildInfoRow('Requested Amount', '₹10,000'),
-                            const Divider(height: 24),
-                            _buildInfoRow('Requested Tenure', '24 Months'),
-                            const Divider(height: 24),
-                            _buildInfoRow('Expected Date', '7-NOV-2026'),
-                            const Divider(height: 24),
-                            _buildInfoRow('Bank Account', 'SBI (**** 1234)'),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildTimelineTracking(String currentStatus) {
-    int currentStep = 0;
-    if (currentStatus == 'Processing') currentStep = 1;
-    if (currentStatus == 'Verification') currentStep = 2; 
-    if (currentStatus == 'Approved') currentStep = 3;
-    if (currentStatus == 'Disbursed') currentStep = 4;
-    
-    return Row(
-      children: [
-        _buildTrackingNode('Submitted', Icons.assignment, currentStep >= 0, currentStep > 0, isFirst: true),
-        _buildTrackingNode('Processing', Icons.settings, currentStep >= 1, currentStep > 1),
-        _buildTrackingNode('Verified', Icons.verified_user, currentStep >= 2, currentStep > 2),
-        _buildTrackingNode('Approved', Icons.check_circle, currentStep >= 3, currentStep > 3),
-        _buildTrackingNode('Disbursed', Icons.account_balance_wallet, currentStep >= 4, false, isLast: true),
-      ],
-    );
-  }
-
-  Widget _buildTrackingNode(String label, IconData icon, bool isReached, bool isPassed, {bool isFirst = false, bool isLast = false}) {
-    Color activeColor = const Color(0xFF00D09C);
-    Color inactiveColor = const Color(0xFFE0E0E0);
-    Color nodeColor = isReached ? activeColor : inactiveColor;
-    
-    return Expanded(
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: Container(height: 4, color: isFirst ? Colors.transparent : (isReached ? activeColor : inactiveColor))),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(color: nodeColor, shape: BoxShape.circle),
-                child: Icon(icon, color: Colors.white, size: 16),
-              ),
-              Expanded(child: Container(height: 4, color: isLast ? Colors.transparent : (isPassed ? activeColor : inactiveColor))),
-            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isReached ? FontWeight.bold : FontWeight.normal,
-              color: isReached ? AppColors.textDark : AppColors.textLight,
-            ),
-          )
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+            child: AppButton(label: 'Setup Auto Debit', onTap: () {}),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildInfoRow(String label, String value) {
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+  Color get _color {
+    switch (status) {
+      case 'Approved': return AppColors.primary;
+      case 'Cancelled': return AppColors.error;
+      default: return AppColors.warning;
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(status,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _color)),
+    );
+  }
+}
+
+class _StepTracker extends StatelessWidget {
+  final int currentStep;
+  const _StepTracker({required this.currentStep});
+  static const _labels = ['Applied', 'In Review', 'Approved', 'Disbursed'];
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: List.generate(_labels.length * 2 - 1, (i) {
+            if (i.isOdd) {
+              // Line
+              final passed = (i ~/ 2) < currentStep;
+              return Expanded(child: Container(height: 2,
+                  color: passed ? AppColors.primary : AppColors.border));
+            } else {
+              // Node
+              final nodeIdx = i ~/ 2;
+              final reached = nodeIdx < currentStep;
+              return Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(
+                  color: reached ? AppColors.primary : AppColors.background,
+                  border: Border.all(
+                      color: reached ? AppColors.primary : AppColors.border,
+                      width: 2),
+                  shape: BoxShape.circle,
+                ),
+                child: reached
+                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                    : null,
+              );
+            }
+          }),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: _labels.map((l) => SizedBox(
+            width: 64,
+            child: Text(l,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 10, color: AppColors.textGrey)),
+          )).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String label, value;
+  const _InfoCard({required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textGrey)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeeRow extends StatelessWidget {
+  final String label, value;
+  final bool isLast;
+  const _FeeRow(this.label, this.value, this.isLast);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: isLast ? null : const Border(
+            bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textGrey)),
+          ),
+          const SizedBox(width: 8),
+          Text(value, style: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label, value;
+  const _SummaryRow(this.label, this.value);
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textLight))),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
-          ),
-        ),
+        Text(label, style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        Text(value, style: const TextStyle(
+            fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
       ],
     );
   }

@@ -4,40 +4,111 @@ import '../auth/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
-
   @override
-  _OnboardingScreenState createState() => _OnboardingScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final PageController _pc = PageController();
+  int _page = 0;
+
+  static const _slides = [
+    _Slide(
+      icon: Icons.monetization_on_outlined,
+      title: 'Instant Loan Approval',
+      subtitle: 'Get personal loans approved in minutes.\nNo paperwork, no hassle.',
+      color: Color(0xFF00C48C),
+    ),
+    _Slide(
+      icon: Icons.security_outlined,
+      title: '100% Secure & Private',
+      subtitle: 'Your data is encrypted end-to-end.\nWe never share your information.',
+      color: Color(0xFF3D8EF0),
+    ),
+    _Slide(
+      icon: Icons.trending_down_outlined,
+      title: 'Low Interest Rates',
+      subtitle: 'Competitive rates starting at 10.5% p.a.\nFlexible repayment options.',
+      color: Color(0xFF9B59B6),
+    ),
+  ];
+
+  void _next() {
+    if (_page < _slides.length - 1) {
+      _pc.nextPage(
+          duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
+    } else {
+      _goToLogin();
+    }
+  }
+
+  void _goToLogin() {
+    Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF00D09C),
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        bottom: false,
         child: Column(
           children: [
+            // Skip
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 16, 24, 0),
+                child: TextButton(
+                  onPressed: _goToLogin,
+                  child: const Text('Skip',
+                      style: TextStyle(
+                          color: AppColors.textGrey,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14)),
+                ),
+              ),
+            ),
+
+            // Pages
             Expanded(
-              flex: 2,
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (int page) {
-                  setState(() {
-                    _currentPage = page;
-                  });
-                },
+              child: PageView.builder(
+                controller: _pc,
+                itemCount: _slides.length,
+                onPageChanged: (i) => setState(() => _page = i),
+                itemBuilder: (_, i) => _OnboardingPage(slide: _slides[i]),
+              ),
+            ),
+
+            // Dots + button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 0, 32, 40),
+              child: Column(
                 children: [
-                  _buildPage(
-                    title: 'Welcome To\nEZFINANZ',
-                    imagePath: 'assets/images/onboarding1.jpg',
+                  // Dot indicator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_slides.length, (i) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: _page == i ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _page == i ? AppColors.primary : AppColors.border,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    )),
                   ),
-                  _buildPage(
-                    title: 'Are You Ready To\nTake Control Of\nYour Finances?',
-                    imagePath: 'assets/images/onboarding2.jpg',
+                  const SizedBox(height: 32),
+                  AppButton(
+                    label: _page == _slides.length - 1 ? 'Get Started' : 'Next',
+                    onTap: _next,
                   ),
                 ],
               ),
@@ -47,96 +118,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
   }
+}
 
-  Widget _buildPage({required String title, required String imagePath}) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 60.0, bottom: 40.0),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.white,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF2FBF6),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(40),
-                topRight: Radius.circular(40),
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  height: 250,
-                  width: 250,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: AssetImage(imagePath),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 60),
-                GestureDetector(
-                  onTap: () {
-                    if (_currentPage == 0) {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeIn,
-                      );
-                    } else {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      );
-                    }
-                  },
-                  child: const Text(
-                    'Next',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF00D09C),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildDotIndicator(_currentPage == 0),
-                    const SizedBox(width: 8),
-                    _buildDotIndicator(_currentPage == 1),
-                  ],
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+// ── Slide data ────────────────────────────────────────────────────
+class _Slide {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  const _Slide({required this.icon, required this.title, required this.subtitle, required this.color});
+}
 
-  Widget _buildDotIndicator(bool isActive) {
-    return Container(
-      height: 8,
-      width: 8,
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF00D09C) : Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF00D09C), width: 1.5),
+class _OnboardingPage extends StatelessWidget {
+  final _Slide slide;
+  const _OnboardingPage({required this.slide});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Illustration placeholder
+          Container(
+            width: 180, height: 180,
+            decoration: BoxDecoration(
+              color: slide.color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(slide.icon, size: 80, color: slide.color),
+          ),
+          const SizedBox(height: 48),
+          Text(slide.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 24, fontWeight: FontWeight.w700,
+                  color: AppColors.textDark, height: 1.2)),
+          const SizedBox(height: 16),
+          Text(slide.subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 15, color: AppColors.textGrey, height: 1.6)),
+        ],
       ),
     );
   }

@@ -1,288 +1,296 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
+import 'widgets/loan_card_widget.dart';
+import 'widgets/popular_loans_carousel.dart';
+import 'widgets/loan_detail_bottom_sheet.dart';
 
 class LoansScreen extends StatefulWidget {
   const LoansScreen({Key? key}) : super(key: key);
 
   @override
-  _LoansScreenState createState() => _LoansScreenState();
+  State<LoansScreen> createState() => _LoansScreenState();
 }
 
 class _LoansScreenState extends State<LoansScreen> {
-  String _selectedLoanType = 'All Loans';
-  final List<String> _loanTypes = ['All Loans', 'Personal Loans', 'Home Loans', 'Auto Loans'];
+  String _selectedCategory = 'All Categories';
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-          child: Text('Explore Loans', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.white)),
-        ),
-        
-        // White Body
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF2FBF6),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Dropdown Filter
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.white, 
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.borderGrey)
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedLoanType,
-                        isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF00D09C)),
-                        items: _loanTypes.map((type) => DropdownMenuItem(
-                          value: type, 
-                          child: Text(type, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark))
-                        )).toList(),
-                        onChanged: (value) => setState(() => _selectedLoanType = value!),
-                      ),
-                    ),
-                  ),
-                ),
-                
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    children: [
-                      if (_selectedLoanType == 'All Loans' || _selectedLoanType == 'Personal Loans')
-                        _buildLoanCard(context, 'Personal Loan', 'Up to ₹50,000', '10.5%', '60 Months', Icons.person),
-                      if (_selectedLoanType == 'All Loans' || _selectedLoanType == 'Home Loans')
-                        _buildLoanCard(context, 'Home Loan', 'Up to ₹500,000', '7.5%', '30 Years', Icons.home),
-                      if (_selectedLoanType == 'All Loans' || _selectedLoanType == 'Auto Loans')
-                        _buildLoanCard(context, 'Auto Loan', 'Up to ₹30,000', '8.0%', '84 Months', Icons.directions_car),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+  final List<String> _categories = [
+    'All Categories',
+    'Personal Loan',
+    'Home Loan',
+    'Auto Loan',
+    'Education Loan',
+    'Medical Loan',
+    'Business Loan',
+  ];
+
+  static const List<LoanItemModel> _loans = [
+    LoanItemModel(
+      title: 'Personal Loan',
+      amount: '₹5,00,000',
+      rate: '10.5% p.a.',
+      tenure: '60 mo',
+      icon: Icons.person_rounded,
+      accentColor: Color(0xFF00C48C),
+      description: 'Quick collateral-free loan for personal, medical, or lifestyle needs.',
+      badge: 'TOP PICK',
+      isPopular: true,
+    ),
+    LoanItemModel(
+      title: 'Home Loan',
+      amount: '₹50,00,000',
+      rate: '7.5% p.a.',
+      tenure: '30 yr',
+      icon: Icons.home_rounded,
+      accentColor: Color(0xFF059669),
+      description: 'Purchase or construct your dream home with lowest interest rates in the market.',
+      badge: '7.5% LOWEST',
+      isPopular: true,
+    ),
+    LoanItemModel(
+      title: 'Auto Loan',
+      amount: '₹30,00,000',
+      rate: '8.0% p.a.',
+      tenure: '84 mo',
+      icon: Icons.directions_car_filled_rounded,
+      accentColor: Color(0xFF0D9488),
+      description: 'Instant approval for new and certified pre-owned four-wheelers & two-wheelers.',
+    ),
+    LoanItemModel(
+      title: 'Education Loan',
+      amount: '₹20,00,000',
+      rate: '9.0% p.a.',
+      tenure: '10 yr',
+      icon: Icons.school_rounded,
+      accentColor: Color(0xFF10B981),
+      description: 'Study abroad or premier domestic universities with low interest moratorium.',
+    ),
+    LoanItemModel(
+      title: 'Medical Loan',
+      amount: '₹10,00,000',
+      rate: '11.0% p.a.',
+      tenure: '48 mo',
+      icon: Icons.medical_services_rounded,
+      accentColor: Color(0xFF047857),
+      description: 'Emergency hospital bills & critical treatment credit disbursed in 2 hours.',
+      badge: '2-HR DISBURSAL',
+    ),
+    LoanItemModel(
+      title: 'Business Loan',
+      amount: '₹25,00,000',
+      rate: '12.0% p.a.',
+      tenure: '60 mo',
+      icon: Icons.business_center_rounded,
+      accentColor: Color(0xFF15803D),
+      description: 'Expand inventory, working capital, or infrastructure with zero collateral.',
+    ),
+  ];
+
+  List<LoanItemModel> get _filtered {
+    if (_selectedCategory == 'All Categories') return _loans;
+    return _loans.where((l) => l.title == _selectedCategory).toList();
+  }
+
+  void _showDetail(BuildContext ctx, LoanItemModel loan) {
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => LoanDetailBottomSheet(loan: loan),
     );
   }
 
-  Widget _buildLoanCard(BuildContext context, String title, String amount, String rate, String tenure, IconData icon) {
-    return GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Colors.transparent,
-          isScrollControlled: true,
-          builder: (context) => _buildBottomSheet(title, amount, rate, tenure, icon),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 24.0),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF00D09C), Color(0xFF00B386)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFF00D09C).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
-          ],
-        ),
-        child: Stack(
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.primary,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -20,
-              bottom: -20,
-              child: Icon(icon, size: 150, color: Colors.white.withOpacity(0.1)),
-            ),
+            // ── Clean Header with Dropdown Filter ──
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(16)),
-                        child: Icon(icon, color: Colors.white, size: 28),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Explore Loans',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Curated financing for every need',
+                            style: TextStyle(fontSize: 12, color: Colors.white70),
+                          ),
+                        ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                        child: const Text('Apply Now', style: TextStyle(color: Color(0xFF00D09C), fontWeight: FontWeight.bold, fontSize: 12)),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Amount', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-                          const SizedBox(height: 4),
-                          Text(amount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        ],
+
+                  // Premium Dropdown Selector
+                  Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCategory,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary, size: 24),
+                        style: const TextStyle(
+                          color: AppColors.textDark,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        dropdownColor: Colors.white,
+                        items: _categories.map((cat) {
+                          return DropdownMenuItem<String>(
+                            value: cat,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  cat == 'All Categories'
+                                      ? Icons.apps_rounded
+                                      : Icons.account_balance_wallet_outlined,
+                                  size: 18,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(cat),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedCategory = val);
+                          }
+                        },
                       ),
-                      const SizedBox(width: 32),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Interest', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-                          const SizedBox(height: 4),
-                          Text(rate, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        ],
-                      ),
-                    ],
-                  )
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildBottomSheet(String title, String amount, String rate, String tenure, IconData icon) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (_, controller) => Container(
-        padding: const EdgeInsets.all(32),
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
-        ),
-        child: ListView(
-          controller: controller,
-          children: [
-            Center(
+            // ── White Scrollable Body ──
+            Expanded(
               child: Container(
-                width: 50,
-                height: 5,
-                decoration: BoxDecoration(color: AppColors.borderGrey, borderRadius: BorderRadius.circular(10)),
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(0, 20, 0, 100),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Featured Best Offers Carousel
+                      if (_selectedCategory == 'All Categories') ...[
+                        const PopularLoansCarousel(),
+                        const SizedBox(height: 24),
+                      ],
+
+                      // Grid Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _selectedCategory == 'All Categories' ? 'Available Plans' : '$_selectedCategory Plans',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${_filtered.length} Options',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 2-Column Responsive Card Grid
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.86,
+                          ),
+                          itemCount: _filtered.length,
+                          itemBuilder: (_, i) => LoanCardWidget(
+                            loan: _filtered[i],
+                            onTap: () => _showDetail(context, _filtered[i]),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: const Color(0xFF00D09C).withOpacity(0.1), shape: BoxShape.circle),
-                  child: Icon(icon, color: const Color(0xFF00D09C), size: 32),
-                ),
-                const SizedBox(width: 16),
-                Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.textDark)),
-              ],
-            ),
-            const SizedBox(height: 32),
-            
-            // New Descriptive Paragraph
-            const Text('About This Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 12),
-            Text(
-              'This $title provides you with quick access to funds tailored to your financial needs. Enjoy flexible repayment tenures and competitive interest rates, ensuring a smooth borrowing experience.',
-              style: const TextStyle(fontSize: 14, color: AppColors.textLight, height: 1.6),
-            ),
-            const SizedBox(height: 32),
-            
-            const Text('Loan Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 16),
-            _buildDetailRow('Maximum Amount', amount),
-            const Divider(height: 32),
-            _buildDetailRow('Interest Rate', 'Starting at $rate APR'),
-            const Divider(height: 32),
-            _buildDetailRow('Maximum Tenure', tenure),
-            const Divider(height: 32),
-            _buildDetailRow('Processing Fee', '1.5% of loan amount + GST'),
-            
-            const SizedBox(height: 32),
-            const Text('Eligibility & Rules', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 16),
-            _buildBulletPoint('Age must be between 21 and 58 years.'),
-            _buildBulletPoint('Minimum monthly income of ₹2,500.'),
-            _buildBulletPoint('Minimum CIBIL Score of 700.'),
-            _buildBulletPoint('Pre-closure allowed after 6 EMIs (3% charge).'),
-            
-            const SizedBox(height: 32),
-            const Text('Required Documents', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 16),
-            _buildBulletPoint('Identity Proof (Aadhaar/Passport).'),
-            _buildBulletPoint('Address Proof.'),
-            _buildBulletPoint('Last 3 months bank statements.'),
-            
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00D09C),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                onPressed: () {},
-                child: const Text('Apply Now', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.white)),
-              ),
-            ),
-            const SizedBox(height: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  // Updated to fix RenderFlex Overflow by using Expanded
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 16, color: AppColors.textLight))),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6.0),
-            child: Icon(Icons.circle, size: 8, color: Color(0xFF00D09C)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textDark, height: 1.5))),
-        ],
       ),
     );
   }

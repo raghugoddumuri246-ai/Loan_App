@@ -1,159 +1,297 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../utils/constants.dart';
-import 'phone_otp_screen.dart';
+import '../dashboard/customer_dashboard_screen.dart';
 
+/// Phone login: enter phone → OTP verify → Dashboard
 class PhoneLoginScreen extends StatefulWidget {
   const PhoneLoginScreen({Key? key}) : super(key: key);
-
   @override
-  _PhoneLoginScreenState createState() => _PhoneLoginScreenState();
+  State<PhoneLoginScreen> createState() => _PhoneLoginScreenState();
 }
 
 class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _phoneController = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  String? _phoneErr;
+  bool _sent = false;
 
   void _sendOtp() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PhoneOtpScreen(isLogin: true)),
-      );
+    setState(() {
+      _phoneErr = _phoneCtrl.text.trim().length < 10
+          ? 'Enter a valid 10-digit number' : null;
+    });
+    if (_phoneErr == null) {
+      setState(() => _sent = true);
     }
   }
 
   @override
+  void dispose() { _phoneCtrl.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.mainGreen,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 24.0, top: 10.0, bottom: 20.0),
-              child: Column(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Phone Sign In'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: _sent
+            ? _PhoneOtpEntry(phone: _phoneCtrl.text.trim())
+            : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 10),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      'Phone Login',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.white,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
+                  const Text('Enter your phone', style: AppTextStyles.heading),
                   const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(
-                      'Enter your phone number to receive a verification code.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.white.withOpacity(0.8),
-                        fontWeight: FontWeight.w400,
-                      ),
+                  const Text('We\'ll send an OTP to verify',
+                      style: AppTextStyles.subheading),
+                  const SizedBox(height: 36),
+                  AppTextField(
+                    label: 'Mobile Number',
+                    hint: '9876543210',
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                    error: _phoneErr,
+                    onChanged: (_) => setState(() => _phoneErr = null),
+                    prefix: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                      child: Text('+91',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark, fontSize: 14)),
                     ),
                   ),
+                  const SizedBox(height: 32),
+                  AppButton(label: 'Send OTP', onTap: _sendOtp),
                 ],
               ),
-            ),
-            
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(40),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        _buildLabel('Phone Number'),
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          style: const TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w600),
-                          decoration: InputDecoration(
-                            hintText: 'Enter 10-digit phone number',
-                            hintStyle: TextStyle(color: AppColors.textLight.withOpacity(0.6)),
-                            prefixIcon: const Icon(Icons.phone_android, color: AppColors.textLight, size: 22),
-                            filled: true,
-                            fillColor: AppColors.lightGreenSurface,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: const BorderSide(color: AppColors.mainGreen, width: 2.0),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return 'Required field';
-                            if (!RegExp(r"^\d{10}$").hasMatch(value)) {
-                              return 'Enter exactly 10 digits';
-                            }
-                            return null;
-                          },
-                        ),
-                        
-                        const SizedBox(height: 40),
+      ),
+    );
+  }
+}
 
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.mainGreen,
-                              elevation: 4,
-                              shadowColor: AppColors.mainGreen.withOpacity(0.4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: _sendOtp,
-                            child: const Text(
-                              'Send OTP',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.white),
-                            ),
-                          ),
-                        ),
+class _PhoneOtpEntry extends StatefulWidget {
+  final String phone;
+  const _PhoneOtpEntry({required this.phone});
+  @override
+  State<_PhoneOtpEntry> createState() => _PhoneOtpEntryState();
+}
+
+class _PhoneOtpEntryState extends State<_PhoneOtpEntry>
+    with SingleTickerProviderStateMixin {
+  late final String _otp = List.generate(6, (_) => Random().nextInt(10)).join();
+  bool _showBanner = true;
+  int _bannerSecs = 30;
+  int _resendSecs = 60;
+  Timer? _bannerT, _resendT;
+  bool _loading = false;
+  bool _hasErr = false;
+
+  final _ctrls = List.generate(6, (_) => TextEditingController());
+  final _nodes = List.generate(6, (_) => FocusNode());
+
+  late AnimationController _shake;
+  late Animation<double> _shakeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _shakeAnim = Tween<double>(begin: 0, end: 10)
+        .chain(CurveTween(curve: Curves.elasticIn)).animate(_shake)
+      ..addStatusListener((s) { if (s == AnimationStatus.completed) _shake.reverse(); });
+    _startBanner(); _startResend();
+  }
+
+  void _startBanner() {
+    _bannerT?.cancel();
+    setState(() { _bannerSecs = 30; _showBanner = true; });
+    _bannerT = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() { if (_bannerSecs > 1) _bannerSecs--; else { _showBanner = false; t.cancel(); } });
+    });
+  }
+
+  void _startResend() {
+    _resendT?.cancel();
+    setState(() => _resendSecs = 60);
+    _resendT = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() { if (_resendSecs > 0) _resendSecs--; else t.cancel(); });
+    });
+  }
+
+  void _onDigit(int i, String v) {
+    if (v.length == 1 && i < 5) _nodes[i + 1].requestFocus();
+    else if (v.isEmpty && i > 0) _nodes[i - 1].requestFocus();
+    if (_ctrls.map((c) => c.text).join().length == 6) _verify();
+  }
+
+  void _verify() {
+    final entered = _ctrls.map((c) => c.text).join();
+    if (entered == _otp) {
+      setState(() => _loading = true);
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const CustomerDashboardScreen()),
+            (r) => false);
+      });
+    } else {
+      setState(() => _hasErr = true);
+      _shake.forward(from: 0);
+      for (final c in _ctrls) c.clear();
+      _nodes[0].requestFocus();
+    }
+  }
+
+  @override
+  void dispose() {
+    _bannerT?.cancel(); _resendT?.cancel(); _shake.dispose();
+    for (final c in _ctrls) c.dispose();
+    for (final n in _nodes) n.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_showBanner)
+          Container(
+            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.sms_outlined, color: AppColors.primary, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+                      children: [
+                        const TextSpan(text: 'OTP: '),
+                        TextSpan(text: _otp,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800, letterSpacing: 4,
+                                color: AppColors.primary, fontSize: 15)),
+                        TextSpan(text: '  (${_bannerSecs}s)',
+                            style: const TextStyle(
+                                color: AppColors.textGrey, fontSize: 11)),
                       ],
                     ),
                   ),
                 ),
+                GestureDetector(
+                  onTap: () => setState(() => _showBanner = false),
+                  child: const Icon(Icons.close, size: 16, color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          ),
+
+        const Text('Verify OTP', style: AppTextStyles.heading),
+        const SizedBox(height: 6),
+        Text('Sent to +91 ${widget.phone}',
+            style: const TextStyle(color: AppColors.textGrey, fontSize: 14)),
+        const SizedBox(height: 36),
+
+        AnimatedBuilder(
+          animation: _shakeAnim,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(_shakeAnim.value * sin(_shake.value * pi * 6), 0),
+            child: child,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(6, (i) => _OtpBox(
+              controller: _ctrls[i], focusNode: _nodes[i],
+              hasError: _hasErr, onChanged: (v) => _onDigit(i, v),
+            )),
+          ),
+        ),
+
+        if (_hasErr) ...[
+          const SizedBox(height: 10),
+          const Text('Incorrect OTP. Try again.',
+              style: TextStyle(color: AppColors.error, fontSize: 13)),
+        ],
+
+        const SizedBox(height: 32),
+        AppButton(label: 'Verify & Sign In', onTap: _verify, loading: _loading),
+        const SizedBox(height: 20),
+        Center(
+          child: GestureDetector(
+            onTap: _resendSecs == 0 ? () { _startBanner(); _startResend(); for (final c in _ctrls) c.clear(); setState(() => _hasErr = false); } : null,
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 14),
+                children: [
+                  const TextSpan(text: "Didn't receive? ",
+                      style: TextStyle(color: AppColors.textGrey)),
+                  TextSpan(
+                    text: _resendSecs > 0 ? 'Resend in ${_resendSecs}s' : 'Resend OTP',
+                    style: TextStyle(
+                        color: _resendSecs > 0 ? AppColors.textGrey : AppColors.primary,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
+}
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-      child: Text(text, style: AppTextStyles.label),
-    );
-  }
+class _OtpBox extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool hasError;
+  final ValueChanged<String> onChanged;
+  const _OtpBox({required this.controller, required this.focusNode,
+      required this.hasError, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 46, height: 56,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textAlign: TextAlign.center,
+          keyboardType: TextInputType.number,
+          maxLength: 1,
+          onChanged: onChanged,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700,
+              color: AppColors.textDark),
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true, fillColor: AppColors.surface,
+            contentPadding: EdgeInsets.zero,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                    color: hasError ? AppColors.error : AppColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+          ),
+        ),
+      );
 }
